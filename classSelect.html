@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Class Selection</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .big-button {
+            font-size: 2rem;
+            padding: 20px;
+            margin-bottom: 20px;
+            width: 90vw;
+        }
+    </style>
+</head>
+
+<body style="text-align: center;">
+    <div class="container mt-5">
+        <h2 class="text-center mb-4">Select Your Class</h2>
+        <br>
+        <br>
+        <!-- Container for buttons -->
+        <div id="button-container" class="d-grid gap-2"></div>
+    </div>
+
+    <!-- Bootstrap JS and dependencies -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+    <script>
+        // Array with class names
+        const classArray = ['9A', '9B', '9C', '9D', '9E'];
+
+        // Array with button colors
+        const buttonColors = ['primary', 'secondary', 'success', 'danger', 'warning'];
+
+        // Get the container where buttons will be added
+        const buttonContainer = document.getElementById('button-container');
+
+        // Generate buttons dynamically based on the array
+        classArray.forEach((className, index) => {
+            // Create a button element
+            buttonContainer.innerHTML += `
+    <button class="btn btn-${buttonColors[index % buttonColors.length]} big-button" onclick="selectClass('${className}')">
+        ${className}
+    </button>
+    <br>
+`;
+
+        });
+
+
+        function selectClass(txt){
+
+window.location = "rate.html?class="+txt;
+        }
+    </script>
+</body>
+
+</html>

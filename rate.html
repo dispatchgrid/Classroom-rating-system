@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rate the Class</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .star-rating {
+            font-size: 3rem;
+            color: grey;
+            cursor: pointer;
+        }
+
+        .star-rating .selected {
+            color: gold;
+        }
+
+        label {
+            font-size: large;
+        }
+    </style>
+</head>
+
+<body style="text-align: center;">
+    <div class="container mt-5">
+        <h2 class="text-center mb-4">Rate the Class</h2>
+        <h3 class="text-center mb-4" id = "cl">9E</h3>
+
+        <!-- Silence Rating -->
+        <div class="form-group">
+            <label for="silence-rating">Silence</label>
+            <div id="silence-rating" class="star-rating" data-rating="0">
+                <span>&#9733;</span>
+                <span>&#9733;</span>
+                <span>&#9733;</span>
+                <span>&#9733;</span>
+                <span>&#9733;</span>
+            </div>
+            <textarea id="sil" class="form-control mt-2" rows="5" placeholder="Names of silence-breakers"></textarea>
+        </div>
+        <br>
+        <!-- Homework Rating -->
+        <div class="form-group">
+            <label for="homework-rating">Attention</label>
+            <div id="homework-rating" class="star-rating" data-rating="0">
+                <span>&#9733;</span>
+                <span>&#9733;</span>
+                <span>&#9733;</span>
+                <span>&#9733;</span>
+                <span>&#9733;</span>
+            </div>
+            <textarea id="hom" class="form-control mt-2" rows="5"
+                placeholder="Who don't pay attention"></textarea>
+        </div>
+        <br>
+        <!-- Complete Notes Rating -->
+        <div class="form-group">
+            <label for="notes-rating">Obedience</label>
+            <div id="notes-rating" class="star-rating" data-rating="0">
+                <span>&#9733;</span>
+                <span>&#9733;</span>
+                <span>&#9733;</span>
+                <span>&#9733;</span>
+                <span>&#9733;</span>
+            </div>
+            <textarea id="not" class="form-control mt-2" rows="5"
+                placeholder="Disobedient students"></textarea>
+        </div>
+        <br>
+        <!-- Attendance Rating -->
+        <div class="form-group">
+            <label for="attendance-rating">Presence</label>
+            <div id="attendance-rating" class="star-rating" data-rating="0">
+                <span>&#9733;</span>
+                <span>&#9733;</span>
+                <span>&#9733;</span>
+                <span>&#9733;</span>
+                <span>&#9733;</span>
+            </div>
+            <textarea id="att" class="form-control mt-2" rows="5"
+                placeholder="Students who weren't in the class"></textarea>
+        </div>
+        <br><br>
+        <!-- Submit Button -->
+        <div class="form-group">
+            <button type="submit" class="btn btn-primary btn-block" onclick="submitRatings()">Submit</button>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS and dependencies -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+    <!-- JavaScript for star selection -->
+    <script>
+
+
+
+        var stimuTime = "9:45"
+
+
+
+        document.querySelectorAll('.star-rating').forEach(starRating => {
+            const stars = starRating.querySelectorAll('span');
+            stars.forEach((star, index) => {
+                star.addEventListener('click', () => {
+                    starRating.setAttribute('data-rating', index + 1);
+                    updateStars(starRating, index);
+                });
+            });
+        });
+
+        function updateStars(starRating, index) {
+            const stars = starRating.querySelectorAll('span');
+            stars.forEach((star, i) => {
+                star.classList.toggle('selected', i <= index);
+            });
+        }
+
+        function submitRatings() {
+            const silenceRating = document.getElementById('silence-rating').getAttribute('data-rating');
+            const homeworkRating = document.getElementById('homework-rating').getAttribute('data-rating');
+            const notesRating = document.getElementById('notes-rating').getAttribute('data-rating');
+            const attendanceRating = document.getElementById('attendance-rating').getAttribute('data-rating');
+
+            submit();
+        }
+
+        function getCurrentPeriod(inputTime) {
+            const periods = [
+                { start: "07:50", end: "08:30" },
+                { start: "08:30", end: "09:10" },
+                { start: "09:10", end: "09:50" },
+                { start: "09:50", end: "10:30" },
+                { start: "10:30", end: "11:10" },
+                { start: "11:30", end: "12:10" },
+                { start: "12:10", end: "12:50" },
+                { start: "12:50", end: "13:30" }
+            ];
+
+            const timeToMinutes = (time) => {
+                const [hours, minutes] = time.split(":").map(Number);
+                return hours * 60 + minutes;
+            };
+
+            const nowMinutes = timeToMinutes(inputTime);
+
+            for (let i = 0; i < periods.length; i++) {
+                const periodStart = timeToMinutes(periods[i].start);
+                const periodEnd = timeToMinutes(periods[i].end);
+                const periodGraceEnd = periodEnd + 15;
+
+                if (nowMinutes >= periodStart && nowMinutes <= periodGraceEnd) {
+                    return i + 1;
+                }
+            }
+
+            return "No current period";
+        }
+
+
+
+
+        function generateSqlInsertAndSend(name, silence, silenceCom, homework, homeworkCom, notes, notesCom, attendance, attendanceCom, period) {
+            var dat = new Date().getUTCFullYear() + "-" + (new Date().getMonth() + 1) + "-" + new Date().getDate();
+            const sql = `
+    INSERT INTO Classes (Date, Name, Silence, Silence_com, Homework, Homework_com, Notes, Notes_com, Attendance, Attendance_com, period)
+    VALUES ('${dat}', '${name}', ${silence}, '${silenceCom}', ${homework}, '${homeworkCom}', ${notes}, '${notesCom}', ${attendance}, '${attendanceCom}', ${period});
+    `.trim();
+            console.log(sql);
+            const url = `https://legendary-sneaky-inch.glitch.me/api/sql?queries=${encodeURIComponent(sql)}`;
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => console.log(data))
+                .catch(error => console.error('Error:', error));
+        }
+
+        const queryString = window.location.search;
+        console.log(queryString);
+
+        const urlParams = new URLSearchParams(queryString);
+        const cla = urlParams.get('class');
+        document.getElementById("cl").innerHTML = cla;
+        var className = cla;
+            function submit() {
+                var name = className;
+                var silenceCom = document.getElementById("sil").value;
+                var homeworkCom = document.getElementById("hom").value;
+                var notesCom = document.getElementById("not").value;
+                var attendanceCom = document.getElementById("att").value;
+                var period = getCurrentPeriod(stimuTime);
+                var silence = document.getElementById('silence-rating').getAttribute('data-rating');
+                var homework = document.getElementById('homework-rating').getAttribute('data-rating');
+                var notes = document.getElementById('notes-rating').getAttribute('data-rating');
+                var attendance = document.getElementById('attendance-rating').getAttribute('data-rating');
+
+                generateSqlInsertAndSend(name, silence, silenceCom, homework, homeworkCom, notes, notesCom, attendance, attendanceCom, period);
+            }
+
+
+    </script>
+</body>
+
+</html>
