@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>Top Teacher</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .low {
+            background-color: red;
+        }
+
+        .medium {
+            background-color: yellow;
+        }
+
+        .bettar {
+            background-color: orange;
+        }
+
+        .good {
+            background-color: green;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container mt-5">
+        <div class="text-center">
+            <h1>Top Teachers</h1>
+            <div class="form-group mt-4">
+                <label for="startDate">Start Date:</label>
+                <input type="date" class="form-control w-50 mx-auto" id="startDate" onchange="fetchData()">
+                <label for="endDate" class="mt-2">End Date:</label>
+                <input type="date" class="form-control w-50 mx-auto" id="endDate" onchange="fetchData()">
+            </div>
+        </div>
+
+        <table class="table table-striped mt-4" id="teachersTable">
+            <thead>
+                <tr>
+                    <th onclick="sortTable1('teachersTable',0)">Name</th>
+                    <th onclick="sortTable1('teachersTable',1)">C1</th>
+                    <th onclick="sortTable1('teachersTable',2)">C2</th>
+                    <th onclick="sortTable1('teachersTable',3)">C3</th>
+                    <th onclick="sortTable1('teachersTable',4)">C4</th>
+                    <th onclick="sortTable1('teachersTable',5)">Total</th>
+                    <th onclick="sortTable1('teachersTable',6)">Percentage</th>
+                    <th onclick="sortTable1('teachersTable',7)">Attendance</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Data will be populated here dynamically -->
+            </tbody>
+        </table>
+    </div>
+<script src="universal.js"></script>
+    <script>
+        var sortDirection = [];
+        function sortTable1(tableId, columnIndex) {
+            const table = document.getElementById(tableId);
+            const rows = Array.from(table.querySelectorAll('tbody tr'));
+
+            if (sortDirection[columnIndex] === undefined || sortDirection[columnIndex] === 'desc') {
+                sortDirection[columnIndex] = 'asc';
+            } else {
+                sortDirection[columnIndex] = 'desc';
+            }
+
+            rows.sort((a, b) => {
+                const aText = a.cells[columnIndex].textContent.trim();
+                const bText = b.cells[columnIndex].textContent.trim();
+
+                const aValue = parseCellValue(aText);
+                const bValue = parseCellValue(bText);
+
+                if (aValue > bValue) return sortDirection[columnIndex] === 'asc' ? 1 : -1;
+                if (aValue < bValue) return sortDirection[columnIndex] === 'asc' ? -1 : 1;
+                return 0;
+            });
+
+            rows.forEach(row => table.querySelector('tbody').appendChild(row));
+        }
+
+        function parseCellValue(cellText) {
+            const numericValue = parseFloat(cellText.replace(/[%]/g, ''));
+            if (!isNaN(numericValue)) return numericValue;
+
+            return cellText.toLowerCase();
+        }
+
+        function setDefaultDateRange() {
+            const endDate = new Date();
+            const startDate = new Date();
+            startDate.setDate(endDate.getDate() - 7);
+
+            document.getElementById('startDate').value = "2024-10-20";
+            document.getElementById('endDate').value = "2024-10-26";
+
+            fetchData();
+        }
+
+        async function fetchData() {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+
+            if (!startDate || !endDate) return;
+            addLoader();
+            const query = `SELECT * FROM Teachers WHERE date >= '${startDate}' AND date <= '${endDate}'`;
+
+            const response = await fetch(`https://teacher-rating-system.glitch.me/api/sql?queries=${encodeURIComponent(query)}`);
+            const data = await response.json();
+            const teachers = data.results[0].result;
+            removeLoader();
+            const aggregatedData = {};
+
+            teachers.forEach(teacher => {
+                const name = teacher.Name;
+                const attendanceValue = teacher.Attendance;
+                if (!aggregatedData[name]) {
+                    aggregatedData[name] = { C1: 0, C2: 0, C3: 0, C4: 0, Attendance: 0, totalDays: 0, countedDays: 0 };
+                }
+                var attendanceValue1 = getMode(name, teachers, teacher);
+                if (attendanceValue1 === 0 || attendanceValue1 === 2) {
+                    aggregatedData[name].totalDays += 1;
+                } else {
+                    aggregatedData[name].totalDays += 1;
+                    aggregatedData[name].Attendance += attendanceValue1 || 0;
+                }
+                if (attendanceValue !== 0 && attendanceValue !== 2) {
+                    aggregatedData[name].C1 += teacher.C1 || 0;
+                    aggregatedData[name].C2 += teacher.C2 || 0;
+                    aggregatedData[name].C3 += teacher.C3 || 0;
+                    aggregatedData[name].C4 += teacher.C4 || 0;
+                }
+            });
+
+            const aggregatedTeachers = Object.keys(aggregatedData).map(name => ({
+                Name: name,
+                C1: aggregatedData[name].C1,
+                C2: aggregatedData[name].C2,
+                C3: aggregatedData[name].C3,
+                C4: aggregatedData[name].C4,
+                Attendance: aggregatedData[name].Attendance,
+                totalDays: aggregatedData[name].totalDays
+            }));
+
+            aggregatedTeachers.sort((a, b) => {
+                const totalA = a.C1 + a.C2 + a.C3 + a.C4;
+                const maxTotalA = a.totalDays * 4;
+                const percentageA = maxTotalA > 0 ? (totalA / maxTotalA) * 100 : 0;
+
+                const totalB = b.C1 + b.C2 + b.C3 + b.C4;
+                const maxTotalB = b.totalDays * 4;
+                const percentageB = maxTotalB > 0 ? (totalB / maxTotalB) * 100 : 0;
+
+                return percentageB - percentageA;
+            });
+
+            populateTable(aggregatedTeachers);
+        }
+
+        function getMode(name, teachers, teacher) {
+            var attendanceMode = 0;
+            var filtered_data = (filterRecords(teachers, teacher.Date, teacher.period, teacher.Name));
+            var mode = findColumnMode(filtered_data, "Attendance");
+            return mode;
+        }
+
+        function filterRecords(data, date, period, name) {
+            return data.filter(record =>
+                record.Date === date &&
+                record.period === period &&
+                record.Name === name
+            );
+        }
+
+        function findColumnMode(data, columnName) {
+            let freqMap = new Map();
+            let mode, maxCount = 0;
+
+            data.forEach(row => {
+                let value = row[columnName];
+                let count = (freqMap.get(value) || 0) + 1;
+                freqMap.set(value, count);
+                if (count > maxCount) {
+                    maxCount = count;
+                    mode = value;
+                }
+            });
+
+            return mode;
+        }
+
+        function populateTable(teachers) {
+            const tbody = document.getElementById('teachersTable').querySelector('tbody');
+            tbody.innerHTML = '';
+
+            teachers.forEach(teacher => {
+                const total = teacher.C1 + teacher.C2 + teacher.C3 + teacher.C4;
+                const maxTotal = teacher.totalDays * 4;
+                const percentage = maxTotal > 0 ? ((total / maxTotal) * 100).toFixed(2) : 0;
+                const attendancePercentage = teacher.totalDays > 0 ? ((teacher.Attendance / teacher.totalDays) * 100).toFixed(2) : 0;
+
+                const row = `
+                    <tr>
+                        <td >${teacher.Name}</td>
+                        <td >${teacher.C1}</td>
+                        <td >${teacher.C2}</td>
+                        <td >${teacher.C3}</td>
+                        <td >${teacher.C4}</td>
+                        <td >${total}</td>
+                        <td >${percentage}%</td>
+                        <td >${attendancePercentage}%</td>
+                    </tr>
+                `;
+                tbody.insertAdjacentHTML('beforeend', row);
+            });
+        }
+
+        setDefaultDateRange();
+    </script>
+
+    <script>
+        let sortOrder = {};
+
+        function sortTable(columnIndex) {
+            const table = document.getElementById("teachersTable");
+            const tbody = table.querySelector("tbody");
+            const rowsArray = Array.from(tbody.rows);
+            const ascending = !sortOrder[columnIndex];
+            sortOrder[columnIndex] = ascending;
+
+            rowsArray.sort((a, b) => {
+                const aValue = isNaN(a.cells[columnIndex].innerText) ? a.cells[columnIndex].innerText.toLowerCase() : parseFloat(a.cells[columnIndex].innerText);
+                const bValue = isNaN(b.cells[columnIndex].innerText) ? b.cells[columnIndex].innerText.toLowerCase() : parseFloat(b.cells[columnIndex].innerText);
+
+                if (aValue < bValue) return ascending ? -1 : 1;
+                if (aValue > bValue) return ascending ? 1 : -1;
+                return 0;
+            });
+
+            rowsArray.forEach(row => tbody.appendChild(row));
+        }
+
+    </script>
+    <script src="universal.js"></script>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+
+</html>

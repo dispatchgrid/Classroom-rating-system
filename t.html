@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Person Detection with face-api.js</title>
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js"></script>
+</head>
+<body>
+    <h2>Upload an Image to Check for a Person</h2>
+    <input type="file" id="fileInput" accept="image/*">
+    <p id="result">Loading face-api models...</p>
+    <img id="uploadedImage" style="display: none; max-width: 100%; height: auto;" alt="Uploaded Image">
+    
+    <script>
+        async function loadModels() {
+            await faceapi.nets.tinyFaceDetector.loadFromUri('https://www.jsdelivr.com/package/npm/face-api.js');
+            document.getElementById('result').innerText = 'Models loaded. Please upload an image.';
+        }
+
+        document.getElementById('fileInput').addEventListener('change', async function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const image = document.getElementById('uploadedImage');
+                image.src = URL.createObjectURL(file);
+                image.onload = async function() {
+                    const detections = await faceapi.detectAllFaces(image, new faceapi.TinyFaceDetectorOptions());
+                    document.getElementById('result').innerText = detections.length > 0 ? 'Person detected' : 'No person detected';
+                    image.style.display = 'block';
+                };
+            }
+        });
+
+        loadModels();
+    </script>
+</body>
+</html>

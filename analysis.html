@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>Top Teacher Analytics</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+    <div class="container mt-5">
+        <div class="text-center">
+            <h1>Analytics</h1>
+            <div class="form-group mt-4">
+                <label for="startDate">Start Date:</label>
+                <input type="date" class="form-control w-50 mx-auto" id="startDate" onchange="fetchData()">
+                <label for="endDate" class="mt-2">End Date:</label>
+                <input type="date" class="form-control w-50 mx-auto" id="endDate" onchange="fetchData()">
+            </div>
+        </div>
+
+        <div class="mt-5">
+            <canvas id="ratingTrendChart"></canvas>
+        </div>
+        <div class="mt-5">
+            <canvas id="teacherTotalRatingChart"></canvas>
+        </div>
+        <div class="mt-5">
+            <canvas id="teacherAttendanceChart"></canvas>
+        </div>
+    </div>
+
+    <script>
+        async function fetchData() {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+
+            if (!startDate || !endDate) return;
+            addLoader();
+            const query = `SELECT * FROM Teachers WHERE date >= '${startDate}' AND date <= '${endDate}'`;
+            const response = await fetch(`https://teacher-rating-system.glitch.me/api/sql?queries=${encodeURIComponent(query)}`);
+            const data = await response.json();
+            const teachers = data.results[0].result;
+
+            const dateMap = {};
+            const teacherMap = {};
+            removeLoader();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            teachers.forEach(teacher => {
+                const date = teacher.Date;
+                const name = teacher.Name;
+
+                if (!dateMap[date]) {
+                    dateMap[date] = { C1: 0, C2: 0, C3: 0, C4: 0, count: 0, total: 0 };
+                }
+
+                // Only sum ratings if Attendance is 1
+                if (teacher.Attendance === 1) {
+                    dateMap[date].C1 += teacher.C1;
+                    dateMap[date].C2 += teacher.C2;
+                    dateMap[date].C3 += teacher.C3;
+                    dateMap[date].C4 += teacher.C4;
+                    dateMap[date].total += teacher.C1 + teacher.C2 + teacher.C3 + teacher.C4;
+                    dateMap[date].count += 4;
+                }
+
+                if (!teacherMap[name]) {
+                    teacherMap[name] = { total: 0, attendanceCount: 0, totalDays: 0 };
+                }
+
+
+
+
+                // Count attendance and total ratings
+
+                teacherMap[name].totalDays++;
+                if (teacher.Attendance === 1) {
+                    teacherMap[name].attendanceCount++;
+                    teacherMap[name].total += teacher.C1 + teacher.C2 + teacher.C3 + teacher.C4;
+                }
+            });
+
+
+
+
+
+
+
+
+            console.log("Datemap");
+            console.log(dateMap);
+            const dates = Object.keys(dateMap);
+            var C1D = 0;
+            var C2D = 0;
+            var C3D = 0;
+            var C4D = 0;
+
+            var C2P = 0;
+            var C1P = 0;
+            var C3P = 0;
+            var C4P = 0;
+
+            var C1Avg = 0;
+            var C2Avg = 0;
+            var C3Avg = 0;
+            var C4Avg = 0;
+
+
+            dates.forEach(abc => {
+                {
+                    var aggregatedData = {};
+
+                    teachers.forEach(teacher => {
+                        const name = teacher.Name;
+                        const attendanceValue = teacher.Attendance;
+                        if (!aggregatedData[name]) {
+                            aggregatedData[name] = { C1: 0, C2: 0, C3: 0, C4: 0, Attendance: 0, totalDays: 0, countedDays: 0 };
+                        }
+                        var attendanceValue1 = getMode(name, teachers, teacher);
+                        if (attendanceValue1 === 0 || attendanceValue1 === 2) {
+                            aggregatedData[name].totalDays += 1;
+                        } else {
+                            aggregatedData[name].totalDays += 1;
+                            aggregatedData[name].Attendance += attendanceValue1 || 0;
+                        }
+                        if (attendanceValue !== 0 && attendanceValue !== 2) {
+                            aggregatedData[name].C1 += teacher.C1 || 0;
+                            aggregatedData[name].C2 += teacher.C2 || 0;
+                            aggregatedData[name].C3 += teacher.C3 || 0;
+                            aggregatedData[name].C4 += teacher.C4 || 0;
+                            C1P++;
+                            C2P++;
+                            C3P++;
+                            C4P++;
+
+
+
+                        }
+                    });
+
+
+
+                    console.log("aggregrated data:");
+                    console.log(aggregatedData);
+                    var agg = Object.keys(aggregatedData).map(name => ({
+                        Name: name,
+                        C1: aggregatedData[name].C1,
+                        C2: aggregatedData[name].C2,
+                        C3: aggregatedData[name].C3,
+                        C4: aggregatedData[name].C4,
+                        Attendance: aggregatedData[name].Attendance,
+                        totalDays: aggregatedData[name].totalDays
+                    }));
+
+                    console.log(agg);
+                    agg.forEach(row => {
+                        C1D += row.C1;
+                        C2D += row.C2;
+                        C3D += row.C3;
+                        C4D += row.C4;
+                        console.log("row");
+                        console.log(row);
+
+
+                    });
+                    console.log("C1D:" + C1D);
+                    console.log("C1P:" + C1P);
+                    console.log(C1D / C1P * 100)
+
+                }
+            });
+            const avgTotals = dates.map(date => (dateMap[date].total / (dateMap[date].count * 4)) * 100 || 0);
+            const avgC1 = dates.map(date => (dateMap[date].C1 / (dateMap[date].count / 4)) * 100 || 0);
+            const avgC2 = dates.map(date => (dateMap[date].C2 / (dateMap[date].count / 4)) * 100 || 0);
+            const avgC3 = dates.map(date => (dateMap[date].C3 / (dateMap[date].count / 4)) * 100 || 0);
+            const avgC4 = dates.map(date => (dateMap[date].C4 / (dateMap[date].count / 4)) * 100 || 0);
+            console.log(avgC1);
+            console.log(avgC2);
+            console.log(avgC3);
+            console.log(avgC4);
+            const teacherNames = Object.keys(teacherMap);
+            const totalRatings = teacherNames.map(name => {
+                const total = teacherMap[name].total || 0;
+                const days = teacherMap[name].totalDays || 1;
+                return (total / (days * 4)) * 100; // Consider max rating of 4
+            });
+            var attendanceRates = teacherNames.map(name => {
+                const totalDays = teacherMap[name].totalDays || 1;
+                return (teacherMap[name].attendanceCount / totalDays) * 100;
+            });
+            console.log(teachers);
+            C1Avg = C1D;
+            C2Avg = C2D;
+            C3Avg = C3D;
+            C4Avg = C4D;
+            var avgTot = (C1D + C2D + C3D + C4D);
+            console.log(C1Avg);
+            attendanceRates = calculateAttendancePercentages(teachers);
+            console.log(attendanceRates);
+            console.log("serbyewryw");
+            console.log();
+            var C1 = [];
+            var C2 = [];
+            var C3 = [];
+            var C4 = [];
+            var tot = [];
+
+            C1.push(C1Avg);
+            C2.push(C2Avg);
+            C3.push(C3Avg);
+            C4.push(C4Avg);
+            tot.push(avgTot);
+            var C1n = [];
+            var C2n = [];
+            var C3n = [];
+            var C4n = [];
+            var Tots = [];
+
+            dates.forEach(row => {
+                var calculatedTotals = calculateTotalsByDate(teachers.filter(t=>t.Attendance==1), row);
+                C1n.push(calculatedTotals[0]);
+                C2n.push(calculatedTotals[1]);
+                C3n.push(calculatedTotals[2]);
+                C4n.push(calculatedTotals[3]);
+                Tots.push(calculatedTotals[4]);
+            });
+
+            renderLineChart(dates, Tots, C1n, C2n, C3n, C4n);
+            console.log("54vbw34tvbw45bw4tbvw45bqw45w45");
+            console.log(dates);
+            renderBarChart('teacherTotalRatingChart', teacherNames, totalRatings, 'Teacher Total Ratings (%)');
+            renderBarChart('teacherAttendanceChart', teacherNames, attendanceRates, 'Teacher Attendance (%)');
+        }
+        function getMode(name, teachers, teacher) {
+            var attendanceMode = 0;
+            var filtered_data = (filterRecords(teachers, teacher.Date, teacher.period, teacher.Name));
+            var mode = findColumnMode(filtered_data, "Attendance");
+            return mode;
+        }
+        function calculateTotalsByDate(data, targetDate) {
+            let totals = { C1: 0, C2: 0, C3: 0, C4: 0 };
+            let count = { C1: 0, C2: 0, C3: 0, C4: 0 };
+
+            data.forEach(item => {
+                if (item.Date === targetDate) {
+                    totals.C1 += item.C1;
+                    totals.C2 += item.C2;
+                    totals.C3 += item.C3;
+                    totals.C4 += item.C4;
+                    count.C1++;
+                    count.C2++;
+                    count.C3++;
+                    count.C4++;
+                }
+            });
+
+            let percentageC1 = (totals.C1 / count.C1) * 100;
+            let percentageC2 = (totals.C2 / count.C2) * 100;
+            let percentageC3 = (totals.C3 / count.C3) * 100;
+            let percentageC4 = (totals.C4 / count.C4) * 100;
+            let overallPercentage = ((totals.C1 + totals.C2 + totals.C3 + totals.C4) / (count.C1 + count.C2 + count.C3 + count.C4)) * 100;
+
+            return [percentageC1, percentageC2, percentageC3, percentageC4, overallPercentage];
+        }
+
+
+
+        function filterRecords(data, date, period, name) {
+            return data.filter(record =>
+                record.Date === date &&
+                record.period === period &&
+                record.Name === name
+            );
+        }
+
+        function findColumnMode(data, columnName) {
+            let freqMap = new Map();
+            let mode, maxCount = 0;
+
+            data.forEach(row => {
+                let value = row[columnName];
+                let count = (freqMap.get(value) || 0) + 1;
+                freqMap.set(value, count);
+                if (count > maxCount) {
+                    maxCount = count;
+                    mode = value;
+                }
+            });
+
+            return mode;
+        }
+
+        function convertToAttendanceArray(data) {
+            return data.map(item => ({
+                ID: item.ID,
+                Name: item.Name,
+                Attendance: item.Attendance,
+                period: item.period
+            }));
+        }
+        function calculateAttendancePercentages(teachers) {
+            console.log(teachers);
+            var percentages = {};
+            var finals = [];
+
+            for (var i = 0; i < teachers.length; i++) {
+                var teacher = teachers[i];
+                var name = teacher.Name;
+
+                if (!percentages[name]) { // Use name as the key instead of index
+                    percentages[name] = { attendance: 0, totalDays: 0, countedDays: 0 };
+                }
+
+                var attendanceValue1 = getMode(name, teachers, teacher);
+                if (attendanceValue1 === 0 || attendanceValue1 === 2) {
+                    percentages[name].totalDays += 1;
+                } else {
+                    percentages[name].totalDays += 1;
+                    percentages[name].attendance += attendanceValue1 || 0;
+                }
+            }
+
+            console.log(percentages); // Check the contents of the percentages object
+
+            // Now, calculate percentages
+            for (var teacherName in percentages) {
+                var attendanceData = percentages[teacherName];
+                var percentage = attendanceData.totalDays > 0
+                    ? (attendanceData.attendance / attendanceData.totalDays) * 100
+                    : 0; // Handle division by zero
+                finals.push(percentage);
+            }
+
+            console.log(finals); // Check the final percentages
+            return finals;
+
+        }
+
+        function getMode(name, teachers, teacher) {
+            var attendanceMode = 0;
+            var filtered_data = (filterRecords(teachers, teacher.Date, teacher.period, teacher.Name));
+            var mode = findColumnMode(filtered_data, "Attendance");
+            return mode;
+        }
+
+        function filterRecords(data, date, period, name) {
+            return data.filter(record =>
+                record.Date === date &&
+                record.period === period &&
+                record.Name === name
+            );
+        }
+
+        function findColumnMode(data, columnName) {
+            let freqMap = new Map();
+            let mode, maxCount = 0;
+
+            data.forEach(row => {
+                let value = row[columnName];
+                let count = (freqMap.get(value) || 0) + 1;
+                freqMap.set(value, count);
+                if (count > maxCount) {
+                    maxCount = count;
+                    mode = value;
+                }
+            });
+
+            return mode;
+        }
+
+        function renderLineChart(dates, avgTotals, avgC1, avgC2, avgC3, avgC4) {
+            new Chart(document.getElementById('ratingTrendChart'), {
+                type: 'line',
+                data: {
+                    labels: dates,
+                    datasets: [
+                        { label: 'Total Score', data: avgTotals, borderColor: 'blue', fill: false },
+                        { label: 'C1 Score', data: avgC1, borderColor: 'red', fill: false },
+                        { label: 'C2 Score', data: avgC2, borderColor: 'green', fill: false },
+                        { label: 'C3 Score', data: avgC3, borderColor: 'orange', fill: false },
+                        { label: 'C4 Score', data: avgC4, borderColor: 'purple', fill: false }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    title: { display: true, text: 'Average Ratings vs Date (as % of Max)' },
+                    scales: { x: { title: { display: true, text: 'Date' } }, y: { beginAtZero: true } }
+                }
+            });
+        }
+
+        function renderBarChart(canvasId, labels, data, chartTitle) {
+            new Chart(document.getElementById(canvasId), {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: chartTitle,
+                        data: data,
+                        backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    title: { display: true, text: chartTitle },
+                    scales: { x: { title: { display: true, text: 'Teachers' } }, y: { beginAtZero: true, max: 100 } }
+                }
+            });
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const endDate = new Date();
+            const startDate = new Date();
+            startDate.setDate(endDate.getDate() - 40);
+
+            document.getElementById('startDate').value = "2024-10-20"
+            document.getElementById('endDate').value = "2024-10-26";
+
+            fetchData();
+        });
+    </script>
+</body>
+<script src="universal.js"></script>
+
+</html>

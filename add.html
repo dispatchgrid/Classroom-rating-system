@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>Class Data Entry</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .autocomplete-suggestions {
+            border: 1px solid #ddd;
+            max-height: 150px;
+            overflow-y: auto;
+            background-color: #fff;
+            position: absolute;
+            z-index: 1000;
+        }
+        .autocomplete-suggestions div {
+            padding: 8px;
+            cursor: pointer;
+        }
+        .autocomplete-suggestions div:hover {
+            background-color: #f0f0f0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1>Enter Class Data</h1>
+        <form id="classDataForm" autocomplete="off">
+            <div class="form-group">
+                <label for="classname">Classname:</label>
+                <input type="text" class="form-control" id="classname" name="classname" required>
+            </div>
+            <div class="form-group">
+                <label for="period">Period:</label>
+                <input type="number" class="form-control" id="period" name="period" required value="1">
+            </div>
+            <div class="form-group">
+                <label for="teachername">Teacher Name:</label>
+                <input type="text" class="form-control" id="teachername" name="teachername" required>
+            </div>
+            <div class="form-group">
+                <label for="subject">Subject:</label>
+                <input type="text" class="form-control" id="subject" name="subject" required>
+                <div id="subjectSuggestions" class="autocomplete-suggestions"></div>
+            </div>
+            <div class="form-group">
+                <label for="day">Day:</label>
+                <input type="text" class="form-control" id="day" name="day" required readonly value="Monday">
+            </div>
+            <button type="submit" class="btn btn-primary">Submit</button>
+        </form>
+    </div>
+
+    <script>
+        const subjects = ["Math", "Science", "History", "Geography", "English", "Art"];
+        const teacherData = new Set();
+        let periodCounter = 1;
+        const weekdays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+        let currentDayIndex = 0;
+
+        document.getElementById('subject').addEventListener('input', function () {
+            const input = this.value.toLowerCase();
+            const suggestionsDiv = document.getElementById('subjectSuggestions');
+            suggestionsDiv.innerHTML = '';
+
+            const matchingSubjects = subjects.filter(subject => subject.toLowerCase().startsWith(input));
+            matchingSubjects.forEach(subject => {
+                const div = document.createElement('div');
+                div.textContent = subject;
+                div.addEventListener('click', () => {
+                    document.getElementById('subject').value = subject;
+                    suggestionsDiv.innerHTML = '';
+                });
+                suggestionsDiv.appendChild(div);
+            });
+
+            if (matchingSubjects.length === 1) {
+                document.getElementById('subject').value = matchingSubjects[0];
+            }
+        });
+
+        document.getElementById('classDataForm').addEventListener('submit', async function (event) {
+            event.preventDefault();
+            const classname = document.getElementById('classname').value;
+            const period = document.getElementById('period').value;
+            const teachername = document.getElementById('teachername').value;
+            const subject = document.getElementById('subject').value;
+            const day = document.getElementById('day').value;
+
+            teacherData.add(teachername);
+
+            const query = `INSERT INTO class (Classname, Period, Teachername, Subject, Day) 
+                           VALUES ('${classname}', ${period}, '${teachername}', '${subject}', '${day}')`;
+            await fetch(`https://teacher-rating-system.glitch.me/api/sql?queries=${encodeURIComponent(query)}`);
+
+            document.getElementById('subject').value = '';
+            document.getElementById('teachername').value = '';
+
+            periodCounter++;
+            document.getElementById('period').value = periodCounter;
+
+            currentDayIndex = (periodCounter - 1) % 5;
+            document.getElementById('day').value = weekdays[currentDayIndex];
+
+            document.getElementById('teachername').focus();
+        });
+
+        document.getElementById('teachername').addEventListener('focus', function () {
+            const teacherArray = Array.from(teacherData);
+            if (teacherArray.length > 0) {
+                this.value = teacherArray[teacherArray.length - 1];
+            }
+        });
+
+        document.querySelectorAll('input').forEach(input => {
+            input.addEventListener('keydown', function (event) {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    const nextInput = this.closest('form').querySelectorAll('input')[Array.from(this.closest('form').querySelectorAll('input')).indexOf(this) + 1];
+                    if (nextInput) {
+                        nextInput.focus();
+                    } else {
+                        document.getElementById('classDataForm').submit();
+                    }
+                }
+            });
+        });
+
+        document.getElementById('period').addEventListener('input', function () {
+            periodCounter = parseInt(this.value);
+            currentDayIndex = (periodCounter - 1) % 5;
+            document.getElementById('day').value = weekdays[currentDayIndex];
+        });
+    </script>
+</body>
+</html>

@@ -1,46 +1,43 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CRS Admin Dashboard</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>Admin Dashboard</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        .dashboard-container {
-            margin-top: 50px;
-        }
-        .btn-lg {
-            padding: 30px;
-            font-size: 1.5rem;
-            width: 100%;
-            margin-bottom: 20px;
-        }
-        .btn-group {
+        body {
             display: flex;
-            justify-content: space-between;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f8f9fa;
         }
-        @media (max-width: 768px) {
-            .btn-group {
-                flex-direction: column;
-            }
-            .btn-lg {
-                margin-bottom: 10px;
-            }
+
+        .dashboard-button {
+            width: 300px;
+            height: 20%;
+            font-size: 24px;
+            margin: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
     </style>
 </head>
+
 <body>
-
-    <div class="container dashboard-container">
-        <h2 class="text-center mb-5">CRS Admin Dashboard</h2>
-
-        <div class="btn-group">
-            <a href="monthSummary.html" class="btn btn-primary btn-lg">Month summary</a>
-            <a href="weekSummary.html" class="btn btn-warning btn-lg">Week Summary</a>
-        </div>
-        
+    <div class="text-center">
+        <h1 class="mb-5">Admin Dashboard</h1>
+        <a href="topTeacher.html" class="btn btn-primary dashboard-button">Top Teacher</a>
+        <a href="analysis.html" class="btn btn-primary dashboard-button">Analysis</a>
+        <a href="summary.html" class="btn btn-primary dashboard-button">Daily Summary</a>
+        <a href="weekly.html" class="btn btn-primary dashboard-button">Summariser</a>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
+
 </html>

@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Classroom Timetable with Attendance Summary</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        .table-header {
+            text-align: center;
+            width: 10%;
+
+        }
+
+        .headers {
+            text-align: center;
+            width: 5%;
+            border-bottom-style: none !important;
+        }
+
+        th {
+            text-align: center;
+        }
+
+        .holiday {
+            background-color: #d4edda;
+            color: green;
+            text-align: center;
+        }
+
+        .absent {
+            background-color: #f8d7da;
+            color: red;
+        }
+
+        .relief {
+            background-color: #c8e6c9;
+            color: #5a8a5e;
+        }
+
+        .present {
+            background-color: #d4edda;
+            color: green;
+        }
+
+        .missing {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+
+        table {
+            table-layout: fixed;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container mt-5">
+        <h1 class="text-center">Summariser</h1>
+        <div class="text-center">
+            <div class="form-group mt-4">
+                <label for="startDate">Start Date: </label>
+                <input type="date" id="startDate" class="form-control w-50 mx-auto" value="2024-10-20"
+                    onchange="renderAttendanceTable()">
+
+                <label for="endDate" class="mt-2">End Date:</label>
+                <input type="date" id="endDate" class="form-control w-50 mx-auto" value="2024-10-26"
+                    onchange="renderAttendanceTable()">
+            </div>
+        </div>
+        <table id="attendance-table" class="table table-bordered mt-5">
+            <thead>
+                <tr>
+                    <th rowspan="2" style="width:10%;text-align: center;vertical-align: middle;">Subject</th>
+                    <th rowspan="2" style="width:5%;text-align: center;vertical-align: middle;">Total</th>
+                    <th colspan="2" class="table-header">Present</th>
+                    <th colspan="2" class="table-header">Absent</th>
+                    <th colspan="2" class="table-header">Relief</th>
+                </tr>
+                <tr>
+
+
+                    <th class="headers">n</th>
+                    <th class="headers">%</th>
+                    <th class="headers">n</th>
+                    <th class="headers">%</th>
+                    <th class="headers">n</th>
+                    <th class="headers">%</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+            <tfoot>
+                <tr>
+                    <th class="table-secondary">Total</th>
+                    <td class="table-secondary" id="total-count-n">10</td>
+                    <td class="table-secondary" id="total-present-n">0</td>
+                    <td class="table-secondary" id="total-present-percent">0%</td>
+                    <td class="table-secondary" id="total-absent-n">0</td>
+                    <td class="table-secondary" id="total-absent-percent">0%</td>
+                    <td class="table-secondary" id="total-relief-n">0</td>
+                    <td class="table-secondary" id="total-relief-percent">0%</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+    <script src="universal.js"></script>
+    <script>
+
+        async function fetchAttendanceData() {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+
+            if (!startDate || !endDate) return;
+
+            const query = `SELECT * FROM Teachers WHERE date >= '${startDate}' AND date <= '${endDate}'`;
+            const response = await fetch('https://teacher-rating-system.glitch.me/api/sql?queries=' + query);
+            const data = await response.json();
+            return data.results[0].result;
+        }
+
+        async function fetchClassData() {
+            const response = await fetch('https://teacher-rating-system.glitch.me/api/sql?queries=SELECT * FROM Class');
+            const data = await response.json();
+            return data.results[0].result;
+        }
+
+        function fillAttendanceTable(subjectData) {
+            const attendanceTableBody = document.querySelector('#attendance-table tbody');
+            const totalCounts = {
+                present: 0,
+                absent: 0,
+                relief: 0,
+                totalPeriods: 0
+            };
+
+            subjectData.forEach(subject => {
+                const { Subject, Present, Absent, Relief, TotalPeriods } = subject;
+
+                const presentPercent = ((Present / TotalPeriods) * 100).toFixed(2);
+                const absentPercent = ((Absent / TotalPeriods) * 100).toFixed(2);
+                const reliefPercent = ((Relief / TotalPeriods) * 100).toFixed(2);
+
+                // Append a new row for each subject
+                const row = document.createElement('tr');
+                row.innerHTML = `
+            <td>${Subject}</td>
+            <td>${TotalPeriods}</td>
+            <td>${Present}</td>
+            <td>${presentPercent}%</td>
+            <td>${Absent}</td>
+            <td>${absentPercent}%</td>
+            <td>${Relief}</td>
+            <td>${reliefPercent}%</td>
+        `;
+                attendanceTableBody.appendChild(row);
+
+                // Update total counts
+                totalCounts.present += Present;
+                totalCounts.absent += Absent;
+                totalCounts.relief += Relief;
+                totalCounts.totalPeriods += TotalPeriods;
+            });
+
+            // Calculate total percentages for the footer
+            const totalPresentPercent = ((totalCounts.present / totalCounts.totalPeriods) * 100).toFixed(2);
+            const totalAbsentPercent = ((totalCounts.absent / totalCounts.totalPeriods) * 100).toFixed(2);
+            const totalReliefPercent = ((totalCounts.relief / totalCounts.totalPeriods) * 100).toFixed(2);
+
+            // Fill footer with total counts and percentages
+            document.getElementById('total-present-n').innerText = totalCounts.present;
+            document.getElementById('total-present-percent').innerText = totalPresentPercent + '%';
+            document.getElementById('total-absent-n').innerText = totalCounts.absent;
+            document.getElementById('total-absent-percent').innerText = totalAbsentPercent + '%';
+            document.getElementById('total-relief-n').innerText = totalCounts.relief;
+            document.getElementById('total-relief-percent').innerText = totalReliefPercent + '%';
+        }
+
+
+        async function renderAttendanceTable() {
+            var classData = await fetchClassData();
+            var attendanceData = await fetchAttendanceData();
+            console.log(attendanceData);
+            console.log(addSubjectToAttendance(attendanceData, classData));
+            fillAttendanceTable(aggregateSubjectAttendance(getAttendanceTypeByHighestCount((addSubjectToAttendance(attendanceData, classData)))));
+            removeLoader();
+
+            /*
+            const tbody = document.getElementById('attendance-table').querySelector('tbody');
+            tbody.innerHTML = '';
+ 
+            let totalPresent = 0, totalAbsent = 0, totalRelief = 0;
+            attendanceSummary.forEach(({ Subject, PeriodsPresent, PeriodsAbsent, PeriodsRelief, PresentPercent, AbsentPercent, ReliefPercent }) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${Subject}</td>
+                    <td>${PeriodsPresent}</td>
+                    <td>${PresentPercent}%</td>
+                    <td>${PeriodsAbsent}</td>
+                    <td>${AbsentPercent}%</td>
+                    <td>${PeriodsRelief}</td>
+                    <td>${ReliefPercent}%</td>
+                `;
+                tbody.appendChild(row);
+ 
+                totalPresent += PeriodsPresent;
+                totalAbsent += PeriodsAbsent;
+                totalRelief += PeriodsRelief;
+            });
+ 
+            const totalPeriods = totalPresent + totalAbsent + totalRelief;
+            const totalPresentPercent = totalPeriods > 0 ? Math.floor((totalPresent / totalPeriods) * 100) : 0;
+            const totalAbsentPercent = totalPeriods > 0 ? Math.floor((totalAbsent / totalPeriods) * 100) : 0;
+            const totalReliefPercent = totalPeriods > 0 ? Math.floor((totalRelief / totalPeriods) * 100) : 0;
+ 
+            document.getElementById('total-present-n').innerText = totalPresent;
+            document.getElementById('total-present-percent').innerText = totalPresentPercent + '%';
+            document.getElementById('total-absent-n').innerText = totalAbsent;
+            document.getElementById('total-absent-percent').innerText = totalAbsentPercent + '%';
+            document.getElementById('total-relief-n').innerText = totalRelief;
+            document.getElementById('total-relief-percent').innerText = totalReliefPercent + '%';*/
+        }
+        function fillAttendanceTable(subjectData) {
+            const attendanceTableBody = document.querySelector('#attendance-table tbody');
+            const totalCounts = {
+                present: 0,
+                absent: 0,
+                relief: 0,
+                totalPeriods: 0
+            };
+
+            subjectData.forEach(subject => {
+                const { Subject, Present, Absent, Relief, TotalPeriods } = subject;
+
+                const presentPercent = ((Present / TotalPeriods) * 100).toFixed(0);
+                const absentPercent = ((Absent / TotalPeriods) * 100).toFixed(0);
+                const reliefPercent = ((Relief / TotalPeriods) * 100).toFixed(0);
+
+                // Append a new row for each subject
+                const row = document.createElement('tr');
+                row.innerHTML = `
+            <td>${Subject}</td>
+            <td>${TotalPeriods}</td>
+            <td>${Present}</td>
+            <td>${presentPercent}%</td>
+            <td>${Absent}</td>
+            <td>${absentPercent}%</td>
+            <td>${Relief}</td>
+            <td>${reliefPercent}%</td>
+        `;
+                attendanceTableBody.appendChild(row);
+
+                // Update total counts
+                totalCounts.present += Present;
+                totalCounts.absent += Absent;
+                totalCounts.relief += Relief;
+                totalCounts.totalPeriods += TotalPeriods;
+            });
+
+            // Calculate total percentages for the footer
+            const totalPresentPercent = ((totalCounts.present / totalCounts.totalPeriods) * 100).toFixed(2);
+            const totalAbsentPercent = ((totalCounts.absent / totalCounts.totalPeriods) * 100).toFixed(2);
+            const totalReliefPercent = ((totalCounts.relief / totalCounts.totalPeriods) * 100).toFixed(2);
+
+            // Fill footer with total counts and percentages
+            document.getElementById('total-present-n').innerText = totalCounts.present;
+            document.getElementById('total-present-percent').innerText = totalPresentPercent + '%';
+            document.getElementById('total-absent-n').innerText = totalCounts.absent;
+            document.getElementById('total-absent-percent').innerText = totalAbsentPercent + '%';
+            document.getElementById('total-relief-n').innerText = totalCounts.relief;
+            document.getElementById('total-relief-percent').innerText = totalReliefPercent + '%';
+            document.getElementById('total-count-n').innerText = totalCounts.totalPeriods;
+
+        }
+
+        function aggregateSubjectAttendance(attendanceData) {
+            const subjectSummary = {};
+
+            attendanceData.forEach(entry => {
+                const { Subject, Type } = entry;
+
+                if (!subjectSummary[Subject]) {
+                    subjectSummary[Subject] = {
+                        Relief: 0,
+                        Present: 0,
+                        Absent: 0,
+                        TotalPeriods: 0
+                    };
+                }
+
+                if (Type === 0) {
+                    subjectSummary[Subject].Absent++;
+                } else if (Type === 1) {
+                    subjectSummary[Subject].Present++;
+                } else if (Type === 2) {
+                    subjectSummary[Subject].Relief++;
+                }
+
+                subjectSummary[Subject].TotalPeriods++;
+            });
+
+            return Object.entries(subjectSummary).map(([subject, counts]) => ({
+                Subject: subject,
+                ...counts
+            }));
+        }
+        function getAttendanceTypeByHighestCount(attendanceData) {
+            const attendanceCount = {};
+
+            attendanceData.forEach(entry => {
+                const { Date, period, Subject, Attendance } = entry;
+
+                if (!attendanceCount[Subject]) {
+                    attendanceCount[Subject] = {};
+                }
+
+                if (!attendanceCount[Subject][Date]) {
+                    attendanceCount[Subject][Date] = {};
+                }
+
+                if (!attendanceCount[Subject][Date][period]) {
+                    attendanceCount[Subject][Date][period] = {
+                        Present: 0,
+                        Absent: 0,
+                        Relief: 0
+                    };
+                }
+
+                if (Attendance === 1) {
+                    attendanceCount[Subject][Date][period].Present++;
+                } else if (Attendance === 0) {
+                    attendanceCount[Subject][Date][period].Absent++;
+                } else if (Attendance === 2) {
+                    attendanceCount[Subject][Date][period].Relief++;
+                }
+            });
+
+            const result = [];
+
+            for (const subject in attendanceCount) {
+                for (const date in attendanceCount[subject]) {
+                    for (const period in attendanceCount[subject][date]) {
+                        const counts = attendanceCount[subject][date][period];
+                        const maxCount = Math.max(counts.Present, counts.Absent, counts.Relief);
+
+                        let type = null;
+                        if (maxCount === counts.Present) {
+                            type = 1; // Present
+                        } else if (maxCount === counts.Absent) {
+                            type = 0; // Absent
+                        } else if (maxCount === counts.Relief) {
+                            type = 2; // Relief
+                        }
+
+                        result.push({
+                            Date: date,
+                            Period: parseInt(period), // Ensure period is treated as an integer
+                            Subject: subject,
+                            Present: counts.Present,
+                            Absent: counts.Absent,
+                            Relief: counts.Relief,
+                            Type: type
+                        });
+                    }
+                }
+            }
+
+            return result;
+        }
+
+
+        function getAttendanceCountByModeAndSubject(attendanceData) {
+            const attendanceCount = {};
+
+            attendanceData.forEach(entry => {
+                const { Date, period, Subject, Attendance } = entry;
+
+                if (!attendanceCount[Subject]) {
+                    attendanceCount[Subject] = {};
+                }
+
+                if (!attendanceCount[Subject][Date]) {
+                    attendanceCount[Subject][Date] = {};
+                }
+
+                if (!attendanceCount[Subject][Date][period]) {
+                    attendanceCount[Subject][Date][period] = [];
+                }
+
+                attendanceCount[Subject][Date][period].push(Attendance);
+            });
+
+            const result = [];
+
+            for (const subject in attendanceCount) {
+                for (const date in attendanceCount[subject]) {
+                    for (const period in attendanceCount[subject][date]) {
+                        const attendances = attendanceCount[subject][date][period];
+
+                        const mode = attendances.sort((a, b) =>
+                            attendances.filter(v => v === a).length - attendances.filter(v => v === b).length
+                        ).pop();
+
+                        result.push({
+                            Date: date,
+                            Period: parseInt(period),
+                            Subject: subject,
+                            Present: mode === 1 ? attendances.filter(a => a === 1).length : 0,
+                            Absent: mode === 0 ? attendances.filter(a => a === 0).length : 0,
+                            Relief: mode === 2 ? attendances.filter(a => a === 2).length : 0
+                        });
+                    }
+                }
+            }
+
+            return result;
+        }
+
+
+
+        function getUniqueTeacherNames(data) {
+            return [...new Set(data.map(item => item.Name))];
+        }
+        function getSubjectsForTeacher(timetable, teacherName) {
+            return [...new Set(
+                timetable
+                    .filter(item => item.Teachername === teacherName)
+                    .map(item => item.Subject)
+            )];
+        }
+        function getAttendanceForSubject(attendanceData, subject) {
+            return attendanceData.filter(item => item.Subject === subject);
+        }
+        function addSubjectToAttendance(attendanceData, classData) {
+            return attendanceData.map(entry => {
+                const date = new Date(entry.Date);
+                const day = date.toLocaleDateString('en-US', { weekday: 'long' });
+
+                const subjectEntry = classData.find(
+                    item => item.Period === entry.period && item.Date === day && item.Teachername === entry.Name
+                );
+
+                return { ...entry, Subject: subjectEntry ? subjectEntry.Subject : null };
+            });
+        }
+        addLoader();
+        setTimeout(renderAttendanceTable, 2500);
+    </script>
+</body>
+
+</html>

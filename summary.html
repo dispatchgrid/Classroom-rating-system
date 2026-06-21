@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Classroom Timetable with Attendance and Colors</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        .holiday {
+            background-color: #d4edda;
+            color: green;
+            text-align: center;
+        }
+
+        .absent {
+            background-color: #f8d7da;
+            color: red;
+        }
+
+        .relief {
+            background-color: #c8e6c9;
+            color: #5a8a5e;
+        }
+
+        /* Softer greenish color for Relief */
+        .present {
+            background-color: #d4edda;
+            color: green;
+        }
+
+        .missing {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container mt-5">
+        <h1 class="text-center">Daily summary</h1>
+
+        <div class="text-center">
+            <div class="form-group mt-4">
+                <label for="startDate">Start Date: </label>
+                <input type="date" id="startDate" class="form-control w-50 mx-auto" value="2024-10-20"
+                    onchange="fetchTimetableData()">
+
+                <label for="endDate" class="mt-2">End Date:</label>
+                <input type="date" id="endDate" class="form-control w-50 mx-auto" value="2024-10-26"
+                    onchange="fetchTimetableData()">
+            </div>
+        </div>
+
+        <div id="timetableSection" class="mt-5"></div>
+    </div>
+    <script src="universal.js"></script>
+    <script>
+        async function fetchTimetableData() {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            try {
+                
+                const [classResponse, teacherResponse] = await Promise.all([
+                    fetch('https://teacher-rating-system.glitch.me/api/sql?queries=SELECT * FROM Class'),
+                    fetch('https://teacher-rating-system.glitch.me/api/sql?queries=SELECT * FROM Teachers')
+                ]);
+                const classData = await classResponse.json();
+                const teacherData = await teacherResponse.json();
+                removeLoader();
+                const classes = classData.results && classData.results[0] && classData.results[0].result ? classData.results[0].result : [];
+                const teachers = teacherData.results && teacherData.results[0] && teacherData.results[0].result ? teacherData.results[0].result : [];
+
+                if (!classes.length) {
+                    console.log("No class data found in the API response.");
+                    return;
+                }
+
+                const timetableSection = document.getElementById('timetableSection');
+                timetableSection.innerHTML = '';
+
+                const current = new Date(startDate);
+                const end = new Date(endDate);
+
+                while (current <= end) {
+                    if (current.getDay() !== 6 && current.getDay() !== 0) {
+                        const formattedDate = current.toISOString().split('T')[0];
+                        const weekday = current.toLocaleString('en-US', { weekday: 'long' });
+                        console.log(classes);
+                        if (true) {
+                            const fridayTimetable = classes;
+                            var attendanceStatus;
+                            var periodAttendance;
+                            console.log("1 round");
+
+                            if (fridayTimetable.length > 0) {
+                                var tName, tDate, tPeriod = "";
+                                attendanceStatus = fridayTimetable.map(item => {
+                                    periodAttendance = getAttendanceMode(
+                                        teachers.filter(
+                                            t => t.Name === item.Teachername && t.Date === formattedDate && t.period === item.Period
+                                        )
+
+                                    );
+                                    if (item.Date === weekday) {
+                                        tName = item.Teachername;
+                                        console.log("SEb4sb4s");
+                                        console.log(item);
+                                        tPeriod = item.Period;
+
+                                    }
+                                    return { ...item, Status: periodAttendance };
+                                });
+                                attendanceStatus = splitAfterNthPeriod8Keeping8(attendanceStatus, 3);
+                                attendanceStatus = (attendanceStatus.filter(t => t.Date === weekday));
+                                const isHoliday = attendanceStatus.every(entry => entry.Status === "Missing");
+                                console.log(teachers.filter(t => t.Name === tName && t.Date === formattedDate && t.period === tPeriod));
+                                console.log(tName + " " + tPeriod);
+                                if (isHoliday) {
+                                    createHolidayTable(formattedDate, timetableSection, weekday);
+                                } else {
+                                    console.log(teachers);
+                                    createTimetableTable(formattedDate, attendanceStatus, timetableSection, teachers.filter(t => t.Name === tName && t.Date === formattedDate && t.period === tPeriod).length, weekday);
+                                    //console.log(attendanceStatus);
+
+                                }
+                            } else {
+                                createHolidayTable(formattedDate, timetableSection);
+                                console.log(`No timetable data available for ${formattedDate}.`);
+                            }
+                        }
+                    }
+                    current.setDate(current.getDate() + 1);
+                }
+            } catch (error) {
+                console.error("Error fetching data:", error);
+            }
+        }
+        function splitAfterNthPeriod8Keeping8(arr, n) {
+            return arr;
+        }
+
+
+
+        function getAttendanceMode(attendanceData) {
+            if (!attendanceData || attendanceData.length === 0) return "Missing";
+            const counts = {};
+            attendanceData.forEach(entry => {
+                counts[entry.Attendance] = (counts[entry.Attendance] || 0) + 1;
+            });
+            const mode = Object.keys(counts).reduce((a, b) => counts[a] > counts[b] ? a : b);
+            return mode === "0" ? "Absent" : mode === "1" ? "Present" : "Relief";
+        }
+
+        function createHolidayTable(date, container, day) {
+            const table = document.createElement('table');
+            table.className = 'table table-bordered mt-4';
+
+            const header = document.createElement('thead');
+            header.innerHTML = `
+                <tr class="table-primary">
+                    <th colspan="4">Timetable for ${date} (${day})</th>
+                </tr>
+                <tr>
+                    <td colspan="4" class="holiday">Holiday - No classes scheduled</td>
+                </tr>
+            `;
+            table.appendChild(header);
+            container.appendChild(table);
+        }
+
+        function createTimetableTable(date, timetableData, container, submissions, day) {
+            const table = document.createElement('table');
+            table.className = 'table table-bordered mt-4';
+
+            const header = document.createElement('thead');
+            header.innerHTML = `
+                <tr class="table-primary">
+                    <th colspan="4">Timetable for ${date} (${day}) <span style='float:right;'>${submissions} responses</span></th>
+                </tr>
+                <tr>
+                    <th>Period Number</th>
+                    <th>Teacher Name</th>
+                    <th>Subject</th>
+                    <th>Status</th>
+                </tr>
+            `;
+            table.appendChild(header);
+
+            const body = document.createElement('tbody');
+            timetableData.forEach(classItem => {
+                const row = document.createElement('tr');
+                let rowClass = '';
+
+                if (classItem.Status === "Absent") {
+                    rowClass = 'absent';
+                } else if (classItem.Status === "Relief") {
+                    rowClass = 'relief';
+                } else if (classItem.Status === "Present") {
+                    rowClass = 'present';
+                } else if (classItem.Status === "Missing") {
+                    rowClass = 'missing';
+                }
+
+                row.className = rowClass;
+                row.innerHTML = `
+                    <td>${classItem.Period}</td>
+                    <td>${classItem.Teachername}</td>
+                    <td>${classItem.Subject}</td>
+                    <td>${classItem.Status}</td>
+                `;
+                body.appendChild(row);
+            });
+
+            table.appendChild(body);
+            container.appendChild(table);
+        }
+        addLoader();
+
+        setTimeout(fetchTimetableData,2500);
+    </script>
+</body>
+
+</html>
